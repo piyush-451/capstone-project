@@ -1,0 +1,84 @@
+package com.Capstone.Ecommerce.Jwt;
+
+import com.Capstone.Ecommerce.Utils.UtilsFunctions;
+import io.jsonwebtoken.Claims;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Service;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class JwtFilter extends OncePerRequestFilter {
+    private final JwtService jwtService;
+    private final UtilsFunctions conversionUtils;
+
+    @Override
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain
+    ) throws ServletException, IOException {
+        try{
+            String token = getTokenFromHeader(request);
+            if(token == null){
+                System.out.println("token null");
+                throw new AuthenticationCredentialsNotFoundException("Missing JWT Token");
+            }
+            System.out.println("still continue after token null");
+
+            Claims claims = jwtService.validateTokenAndGetClaims(token);
+            Map<String,String> userDetails = new HashMap<>();
+            userDetails.put("id",String.valueOf(claims.get("id",Long.class)));
+            userDetails.put("email", claims.getSubject());
+
+            Set<String> roles = new HashSet<>(conversionUtils.extractListFromClaims(claims,"roles"));
+
+            Set<SimpleGrantedAuthority> authorities = roles.stream()
+                    .map(role->new SimpleGrantedAuthority("ROLE_"+role))
+                    .collect(Collectors.toSet());
+
+            if(SecurityContextHolder.getContext().getAuthentication() == null){
+                System.out.println(userDetails);
+                UsernamePasswordAuthenticationToken authenticationToken =
+                        new UsernamePasswordAuthenticationToken(userDetails,null,authorities);
+                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                authenticationToken.setDetails(token);
+                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            }
+
+            System.out.println("still continue after token validation throws error");
+
+        }
+        catch (Exception e){
+            System.out.println(e.getMessage());
+            request.setAttribute("jwtException",e);
+        }
+
+        filterChain.doFilter(request,response);
+    }
+
+
+    private String getTokenFromHeader(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if(authHeader != null && authHeader.startsWith("Bearer ")){
+            return authHeader.substring(7);
+        }
+        return null;
+    }
+}

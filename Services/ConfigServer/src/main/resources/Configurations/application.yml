@@ -1,0 +1,30 @@
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/api/v1/eureka/
+
+spring:
+  cloud:
+    config:
+      override-system-properties: false
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+
+security:
+  jwt:
+    secretKey: c2VjdXJlS2V5Rm9ySldUQXV0aGVudGljYXRpb25AMjAyNQ
+  apiKey:
+    apiSecret: c2VjdXJlS2V5Rm9ySldUQX
+
+logging:
+  level:
+    org.springframework.web: DEBUG
+
+server:
+  servlet:
+    context-path: /api/v1
