@@ -90,7 +90,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
-        List<String> allowedPaths = List.of("/auth/", "/actuator/");
+        List<String> allowedPaths = List.of("/api/v1/auth/", "/api/v1/actuator/");
         String uri = request.getRequestURI();
         System.out.println("without authentication");
         return allowedPaths.stream().anyMatch(uri::startsWith);
